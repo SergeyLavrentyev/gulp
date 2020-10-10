@@ -7,7 +7,7 @@ const imagemin = require('gulp-imagemin');
 const less = require('gulp-less');
 const pug = require('gulp-pug');
 const path = require('path');
-const htnlPrettify = require('gulp-html-prettify')
+const htmlPrettify = require('gulp-html-prettify');
 
 // paths
 
@@ -16,22 +16,36 @@ const folders = {
     html: './build/',
     styles: './build/styles/',
     script: './build/script/',
-    images: 'build/static/images/'
+    images: './build/static/images/',
+    components: './build/components'
   },
   src: {
-    pug: './src/*.pug',
-    styles: './src/styles/*.less',
+    pug: {
+      watch: './src/**/*.pug',
+      render: './src/*.pug'
+    }, 
+    styles: {
+      watch: './src/**/*.less',
+      render: './src/styles/*.less'
+    },
     script: './src/script/*.js',
-    images: 'src/static/images/*.[jpg, png, svg]'   
+    images: 'src/static/images/*'  
   }
 }
 
 // pug to html 
 
 exports.buildHtml = () => {
-  return src(folders.src.pug)
-    .pipe(pug())
-    .pipe(htnlPrettify())
+  return src(folders.src.pug.render)
+    .pipe(plumber())
+    .pipe(pug({
+      basedir: './src/',
+      filename: folders.src.pug.render
+    }))
+    .pipe(htmlPrettify({
+      indent_char: ' ',
+      indent_size: 2
+    }))
     .pipe(dest(folders.build.html))
     .pipe(browserSync.stream());
 };
@@ -39,10 +53,10 @@ exports.buildHtml = () => {
 // less to css
 
 exports.styles = () => {
-  return src(folders.src.styles)
+  return src(folders.src.styles.render)
     .pipe(plumber())
     .pipe(less({
-      paths: [path.join(__dirname, 'less', 'includes')]
+      paths: [path.join(folders.src.styles.watch, 'less', 'includes')]
     }))
     .pipe(autoprefixer({
       cascade: false
@@ -77,10 +91,11 @@ exports.compress = () => {
 // task watcher
 
 exports.stream = () => {
-  watch(folders.src.pug, series('buildHtml')),
-  watch(folders.src.styles, series('styles')),
+  watch(folders.src.pug.watch, series('buildHtml')),
+  watch(folders.src.styles.watch, series('styles')),
   watch(folders.src.images, series('compress'))
 };
+
 
 // sync
 
